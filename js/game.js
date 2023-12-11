@@ -30,7 +30,10 @@ let dis = [1694 , 323 , 1435 , 554 , 1345 , 606 , 1246 ,696 , 1195 , 743 , 1158 
 // load asset files for our game
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const processNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+let note_i = 0;
+
 let voiceActive = false;
+let gameActive = false;
 let resultNotes = [];
 let startSeconds = 0;
 let endSeconds = 0;
@@ -55,32 +58,41 @@ gameScene.preload = function() {
     let run4 = this.load.image('run5' , 'assets/run/new/5.png');
     this.load.spritesheet('flag' , 'assets/Flag.png' , {frameWidth : 60 , frameHeight : 60});
     this.load.spritesheet('heart' , 'assets/HeartIcon.png' , {frameWidth : 32 , frameHeight : 32});
-    this.load.image('play_bt1' , 'assets/button/play/Default.png');
-    this.load.image('play_bt2' , 'assets/button/play/Hover.png');
+    this.load.image('play_bt1' , 'assets/button/play/start_btn.png');
+    this.load.image('play_bt2' , 'assets/button/play/start_btn.png');
 
     this.load.image('count1' , 'assets/countdown/1.png');
     this.load.image('count2' , 'assets/countdown/2.png');
     this.load.image('count3' , 'assets/countdown/3.png');
 
-    this.load.image('house' , 'assets/house.png');
+    this.load.image('clock1' , 'assets/clock/0.png');
+    this.load.image('clock2' , 'assets/clock/1.png');
+    this.load.image('clock3' , 'assets/clock/2.png');
+    this.load.image('clock4' , 'assets/clock/3.png');
+    this.load.image('clock5' , 'assets/clock/4.png');
+
+
+    this.load.image('house' , 'assets/YellowTent.png');
   };
   // executed once, after assets were loaded
 gameScene.create = function() {
     // background
     let bg = this.add.sprite(0, 0, 'background');
-
-    // change origin to the top-left of the sprite
     bg.setOrigin(0,0);
     bg.setScale(1920 / 3000 , 1080 / 2000);
+
     let house = this.add.sprite(50,880 , 'house');
+    house.setScale(0.1);
+
     noteText = this.add.text(this.scale.width /2 , this.scale.height/2)        
         .setStyle({fontStyle: 'bold', fontFamily: 'Arial' , fontSize: '32px'});
-    house.setScale(0.5);
+
+    this.score = this.add.text(20 , 100 , "TotalScore : 0").setStyle({fontSize : '30px'}).setColor(0xff0000);
+    //make path
     let y = 900 - (dis[0] - 100) /20;
     let tempY;
     let disY = 10;
     this.add.line(0, 0  , 100 ,900 + disY , dis[0] , y + disY, 0xffffff).setOrigin(0,0);
-    this.score = this.add.text(20 , 100 , "TotalScore : 0").setStyle({fontSize : '30px'}).setColor(0xff0000);
     for(let i = 0 ; i < dis.length - 1 ; i ++){
       if(i % 2 == 0)
         tempY = y - (dis[i]  - dis[i+1])/20;
@@ -93,8 +105,12 @@ gameScene.create = function() {
       y = tempY;
     }
 
+
     this.player = this.add.sprite(100 , 900 , 'run2');
     this.player.setScale(0.5);
+
+    this.clock = this.add.sprite(this.scale.width-300 , 100 , 'clock1');
+    this.clock.setScale(0.2);
     this.anims.create({
        key: 'run',
        frames: [
@@ -121,14 +137,31 @@ gameScene.create = function() {
     });
 
     this.anims.create({
+      key: 'clock',
+      frames: [
+        {key: 'clock1'},
+        {key: 'clock2'},
+        {key: 'clock3'},
+        {key: 'clock4'},
+        {key: 'clock5'},
+      ],
+      frameRate: 1,
+      hideOnComplete: false,
+      repeat : -1,
+    });
+
+    this.clock.anims.play('clock')
+
+    this.anims.create({
       key: 'flag',
       frames: this.anims.generateFrameNumbers('flag' , {frames:[0,1,2,3,4]}),
       frmaeRate: 6,
       repeat: -1
     })
 
-    this.flag = this.add.sprite(this.player.x + 10, this.player.y -14 , 'flag');
+    this.flag = this.add.sprite(this.player.x - 25, this.player.y -14 , 'flag');
     this.flag.anims.play('flag');
+    this.flag.flipX = true;
     flagX = this.flag.x;
     flagY = this.flag.y;
      this.heart[0] = this.add.sprite(this.scale.width-100 , 100 , 'heart' ); this.heart[0].setFrame(0);
@@ -139,7 +172,7 @@ gameScene.create = function() {
     button_play= this.add.sprite(this.scale.width /2 , this.scale.height/2 , 'play_bt1');
     button_play.setInteractive({useHandCursor : true}).on('pointerdown' , playButtonDown);
     button_play.setInteractive({useHandCursor : true}).on('pointerup' , playButtonUp);
-    button_play.setScale(2);
+    button_play.setScale(1.5);
 
     keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
@@ -150,7 +183,7 @@ playButtonDown = () => {
   heartCount = 3;
 }
 function stopGame() {
-  flagX = playerX + 10;
+  flagX = playerX - 25;
   flagY = playerY - 14;
   notesCount = 0;
   button_play.setTexture('play_bt1');
@@ -162,6 +195,7 @@ playButtonUp = () => {
 //  button_play.setVisible(false);
   button_play.anims.play('countdown', true);
   setTimeout(function(){
+    gameActive = true;
     start();
     subscribe(DisplayNote)
 
@@ -203,51 +237,55 @@ playButtonUp = () => {
 }
 let dpressed = false;
 gameScene.update = function() {
+     if(gameActive){
+      noteText.setText(processNotes[note_i]);
+      if(moveActive){
+          this.player.anims.play('run' , true);
+        // this.player.setVelocityX(this.playerSpeed * 10);
+          if(!(this.playerHigh == dis.length && this.player.x >= dis[this.playerHigh - 1])){
+            this.player.x += this.playerSpeed * this.playerDirect * (5 - (endSeconds - startSeconds));
+            this.player.y -= this.playerSpeed * (5 - (endSeconds - startSeconds))/ 20;
+            if(!this.player.flipX && this.player.x >= dis[this.playerHigh]){
+              this.playerDirect *= -1;
+              this.playerHigh++;
+              this.player.flipX = true;
+            }else if(this.player.flipX && this.player.x <= dis[this.playerHigh]){
+              this.playerDirect *= -1;
+              this.playerHigh++;
+              this.player.flipX = false;          
+            }
+        }
 
-     if(moveActive){
-        this.player.anims.play('run' , true);
-       // this.player.setVelocityX(this.playerSpeed * 10);
-        if(!(this.playerHigh == dis.length && this.player.x >= dis[this.playerHigh - 1])){
-          this.player.x += this.playerSpeed * this.playerDirect * (5 - (endSeconds - startSeconds));
-          this.player.y -= this.playerSpeed * (5 - (endSeconds - startSeconds))/ 20;
-          if(!this.player.flipX && this.player.x >= dis[this.playerHigh]){
-            this.playerDirect *= -1;
-            this.playerHigh++;
-            this.player.flipX = true;
-          }else if(this.player.flipX && this.player.x <= dis[this.playerHigh]){
-            this.playerDirect *= -1;
-            this.playerHigh++;
-            this.player.flipX = false;          
-          }
-       }
-
-        
-    }else{
-        this.player.anims.play('run' , false);
-    }
-    playerX = this.player.x;
-    playerY = this.player.y;
-    this.flag.x = flagX;
-    this.flag.y = flagY;
-    if(keyD.isDown) dpressed = true;
-    if(keyD.isUp && dpressed){
-      console.log('D key pressed');
-      heartCount--;
-      dpressed = false;
-    }
-    for(let i = 0 ; i < heartCount ; i ++){
-      this.heart[i].setFrame(0);
-    }
-    for(let i = heartCount  ; i < 3 ; i ++){
-      this.heart[i].setFrame(1);
-    }
-    if(heartCount == 0){
+          
+      }else{
+          this.player.anims.play('run' , false);
+      }
       playerX = this.player.x;
       playerY = this.player.y;
-      stopGame();
-    }
+      this.flag.x = flagX;
+      this.flag.y = flagY;
+      if(keyD.isDown) dpressed = true;
 
-    this.score.setText("TotalScore : " + totalScore);
+      if(keyD.isUp && dpressed){
+        console.log('D key pressed');
+        this.cameras.main.shake(100);
+        heartCount--;
+        dpressed = false;
+      }
+      for(let i = 0 ; i < heartCount ; i ++){
+        this.heart[i].setFrame(0);
+      }
+      for(let i = heartCount  ; i < 3 ; i ++){
+        this.heart[i].setFrame(1);
+      }
+      if(heartCount == 0){
+        playerX = this.player.x;
+        playerY = this.player.y;
+        stopGame();
+      }
+
+      this.score.setText("TotalScore : " + totalScore);
+    }
 }
 
 const DisplayNote = (noteData) => {
