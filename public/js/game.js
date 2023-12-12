@@ -42,10 +42,13 @@ let endSeconds = 0;
 let moveActive = false;
 let notesCount = 0;
 let heartCount = 3;
-
+let scores = {};
 let flagX , flagY ,playerX , playerY;
 
 let  keyD , isDead = false;
+
+
+var self;
 gameScene.init = function(){
     this.playerSpeed = 0.2;
     this.playerDirect = 1;
@@ -53,6 +56,67 @@ gameScene.init = function(){
     this.heart = [];
 }
 gameScene.preload = function() {
+
+    //loading Screen
+    var progressBar = this.add.graphics();
+    var progressBox = this.add.graphics();
+        
+    var width = this.cameras.main.width;
+    var height = this.cameras.main.height;
+
+    progressBox.fillStyle(0x222222, 0.8);
+    progressBox.fillRect(width/2 - 160, 270, 320, 50);
+
+    var loadingText = this.make.text({
+        x: width / 2,
+        y: height / 2 - 50,
+        text: 'Loading...',
+        style: {
+            font: '20px monospace',
+            fill: '#ffffff'
+        }
+    });
+    loadingText.setOrigin(0.5, 0.5);
+    
+    var percentText = this.make.text({
+        x: width / 2,
+        y: height / 2 - 5,
+        text: '0%',
+        style: {
+            font: '18px monospace',
+            fill: '#ffffff'
+        }
+    });
+    percentText.setOrigin(0.5, 0.5);
+    
+    var assetText = this.make.text({
+        x: width / 2,
+        y: height / 2 + 50,
+        text: '',
+        style: {
+            font: '18px monospace',
+            fill: '#ffffff'
+        }
+    });
+    assetText.setOrigin(0.5, 0.5);
+    
+    this.load.on('progress', function (value) {
+        percentText.setText(parseInt(value * 100) + '%');
+        progressBar.clear();
+        progressBar.fillStyle(0xffffff, 1);
+        progressBar.fillRect(width/2 - 150, 280, 300 * value, 30);
+    });
+    
+    this.load.on('fileprogress', function (file) {
+        assetText.setText('Loading asset: ' + file.key);
+    });
+    this.load.on('complete', function () {
+        progressBar.destroy();
+        progressBox.destroy();
+        loadingText.destroy();
+        percentText.destroy();
+        assetText.destroy();
+    });
     // load images
     this.load.image('background', 'assets/mountain.jpg');
     let run2 = this.load.image('run2' , 'assets/run/new/2.png');
@@ -79,22 +143,28 @@ gameScene.preload = function() {
   // executed once, after assets were loaded
 gameScene.create = function() {
     // create socket
-
+      self = this;
       this.socket = io();
+      this.socket.on('scoreboard' , function(players){
+        console.log(players);
+      })
     // background
     let bg = this.add.sprite(0, 0, 'background');
     bg.setOrigin(0,0);
     bg.setScale(1920 / 3000 , 1080 / 2000);
 
-    let house = this.add.sprite(50,880 , 'house');
-    house.setScale(0.1);
+
+    this.add.sprite(70,890 , 'house').setScale(0.04);
+    this.add.sprite(100,880 , 'house').setScale(0.04);
+    this.add.sprite(110,900 , 'house').setScale(0.05);
 
     this.score = this.add.text(20 , 100 , "TotalScore : 0").setStyle({fontSize : '30px' ,fontFamily: 'pixelArt'}).setColor(0xff0000);
     //make path
-    let y = 900 - (dis[0] - 100) /20;
+    let firstx = 160 , firsty = 897;
+    let y = firsty - (dis[0] - firstx) /20;
     let tempY;
     let disY = 10;
-    this.add.line(0, 0  , 100 ,900 + disY , dis[0] , y + disY, 0xffffff).setOrigin(0,0);
+    this.add.line(0, 0  , firstx ,firsty + disY , dis[0] , y + disY, 0xffffff).setOrigin(0,0);
     for(let i = 0 ; i < dis.length - 1 ; i ++){
       if(i % 2 == 0)
         tempY = y - (dis[i]  - dis[i+1])/20;
@@ -108,7 +178,7 @@ gameScene.create = function() {
     }
 
 
-    this.player = this.add.sprite(100 , 900 , 'run2');
+    this.player = this.add.sprite(firstx , firsty , 'run2');
     this.player.setScale(0.5);
 
     clock = this.add.sprite(this.scale.width-300 , 100 , 'clock1');
@@ -160,7 +230,7 @@ gameScene.create = function() {
       repeat: -1
     })
 
-    this.flag = this.add.sprite(this.player.x - 25, this.player.y -14 , 'flag');
+    this.flag = this.add.sprite(this.player.x - 35, this.player.y -14 , 'flag');
     this.flag.anims.play('flag');
     this.flag.flipX = true;
     flagX = this.flag.x;
@@ -219,7 +289,7 @@ function shuffleArray(array) {
 }
 
 function stopGame() {
-  flagX = playerX - 25;
+  flagX = playerX - 35;
   flagY = playerY - 14;
   notesCount = 0;
   button_play.setTexture('play_bt1');
@@ -252,6 +322,7 @@ playButtonUp = () => {
             }else{
               forwardDis = 5 - (endSeconds - startSeconds)
               totalScore += forwardDis;
+              self.socket.emit('addScore' , self.socket.id , totalScore)
             }
             resultNotes = [];
             //console.log(startSeconds , endSeconds)
