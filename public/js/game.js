@@ -14,7 +14,7 @@ let config = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    },
+  },
 };
 // create the game, and pass it the configuration
 let button_play;
@@ -29,6 +29,7 @@ let limitCounts = 25;
 let totalScore = 0;
 let dis = [1694 , 323 , 1435 , 554 , 1345 , 606 , 1246 ,696 , 1195 , 743 , 1158 , 782 , 1115 , 819 , 1076 , 883 , 1044 , 905 , 1032 , 924 , 1018 , 971];
 let forwardDis = 0;
+let noteDisplay = true;
 
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -42,13 +43,16 @@ let endSeconds = 0;
 let moveActive = false;
 let notesCount = 0;
 let heartCount = 3;
-let scores = {};
+let scores = [];
 let flagX , flagY ,playerX , playerY;
 
 let  keyD , isDead = false;
 
 
-var self;
+let self;
+let user = "";
+let totalNote = 0 , totalTime = 0;
+let gameStartTime = 0 , gameEndTime = 0;
 gameScene.init = function(){
     this.playerSpeed = 0.2;
     this.playerDirect = 1;
@@ -119,6 +123,8 @@ gameScene.preload = function() {
     });
     // load images
     this.load.image('background', 'assets/mountain.jpg');
+    this.load.image('scoreboard', 'assets/scoreboard.jpg');
+    this.load.image('score_btn' , 'assets/score_btn.png');
     let run2 = this.load.image('run2' , 'assets/run/new/2.png');
     let run3 = this.load.image('run3' , 'assets/run/new/3.png');
     let run4 = this.load.image('run5' , 'assets/run/new/5.png');
@@ -139,14 +145,19 @@ gameScene.preload = function() {
 
 
     this.load.image('house' , 'assets/YellowTent.png');
+
+    this.load.image('correct' , 'assets/correct.png');
+    this.load.image('incorrect' , 'assets/incorrect.png');
   };
   // executed once, after assets were loaded
 gameScene.create = function() {
     // create socket
       self = this;
       this.socket = io();
+      this.socket.emit('scoreboard');
       this.socket.on('scoreboard' , function(players){
-        console.log(players);
+        scores = players;
+        user = this.id;
       })
     // background
     let bg = this.add.sprite(0, 0, 'background');
@@ -158,7 +169,12 @@ gameScene.create = function() {
     this.add.sprite(100,880 , 'house').setScale(0.04);
     this.add.sprite(110,900 , 'house').setScale(0.05);
 
-    this.score = this.add.text(20 , 100 , "TotalScore : 0").setStyle({fontSize : '30px' ,fontFamily: 'pixelArt'}).setColor(0xff0000);
+    this.score = this.add.text(100 , 100 , "TotalScore : 0").setStyle({fontSize : '30px' ,fontFamily: 'pixelArt'}).setColor(0xffffff);
+    this.playTime = this.add.text(80 , 150 , "Time: 0").setStyle({fontSize : '20px' ,fontFamily: 'pixelArt'}).setColor(0xffffff);
+    this.playNote = this.add.text(350 , 150 , "Note: 0").setStyle({fontSize : '20px' ,fontFamily: 'pixelArt'}).setColor(0xffffff);
+    this.score_btn = this.add.image(40 , 100 , 'score_btn').setOrigin(0 , 0).setScale(0.3);
+    this.score_btn.setInteractive({useHandCursor : true}).on('pointerdown' , scoreButtonDown);
+    this.score_btn.setInteractive({useHandCursor : true}).on('pointerup' , scoreButtonUp);
     //make path
     let firstx = 160 , firsty = 897;
     let y = firsty - (dis[0] - firstx) /20;
@@ -233,18 +249,26 @@ gameScene.create = function() {
     this.flag = this.add.sprite(this.player.x - 35, this.player.y -14 , 'flag');
     this.flag.anims.play('flag');
     this.flag.flipX = true;
+
+    this.flag1 = this.add.sprite(971 , 320 , 'flag');
+    this.flag1.anims.play('flag');
+    this.flag1.flipX = true;
+
+
     flagX = this.flag.x;
     flagY = this.flag.y;
 
-    this.heart[0] = this.add.sprite(this.scale.width-100 , 100 , 'heart' ); this.heart[0].setFrame(0);
-    this.heart[1] = this.add.sprite(this.scale.width-100 - 40 , 100 , 'heart' ); this.heart[1].setFrame(0);
-    this.heart[2] = this.add.sprite(this.scale.width-100 - 80, 100 , 'heart' ); this.heart[2].setFrame(0);
+    this.heart[0] = this.add.sprite(this.scale.width-100 , 100 , 'heart' ); this.heart[0].setFrame(0).setScale(1.6);
+    this.heart[1] = this.add.sprite(this.scale.width-100 - 50 , 100 , 'heart' ); this.heart[1].setFrame(0).setScale(1.6);
+    this.heart[2] = this.add.sprite(this.scale.width-100 - 100, 100 , 'heart' ); this.heart[2].setFrame(0).setScale(1.6);
 
-    noteText = this.add.text(this.scale.width - 350, 250)        
-    .setStyle({fontSize: '200px'}).setOrigin(0 , 0);
+    noteText = this.add.text(this.scale.width/2 - 110, this.scale.height/2 - 150)        
+    .setStyle({fontSize: '400px'}).setOrigin(0 , 0);
 
-    resultText = this.add.text(this.scale.width - 350 , 250)
-    .setStyle({fontSize : '200px'});
+    resultText = this.add.sprite(this.scale.width/2 , this.scale.height/2 - 250,'correct').setScale(0.5);
+    resultText.setVisible(false);
+
+
 
     this.playerHigh = 0;
     button_play= this.add.sprite(this.scale.width /2 , this.scale.height/2 , 'play_bt1');
@@ -255,12 +279,20 @@ gameScene.create = function() {
     keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
 }
+
+function scoreButtonDown () {
+  self.socket.emit('scoreboard');
+  console.log(scores);
+}
+
+function scoreButtonUp () {
+
+}
 playButtonDown = () => {
   play_clicked = true;
   button_play.setTexture('play_bt2');
   heartCount = 3;
   processNotes = generateRandomNotes();
-  console.log(processNotes)
 }
 
 function generateRandomNotes() {
@@ -292,10 +324,13 @@ function stopGame() {
   flagX = playerX - 35;
   flagY = playerY - 14;
   notesCount = 0;
+  button_play.anims.play("countdown" , false);
   button_play.setTexture('play_bt1');
   button_play.setVisible(true);
   noteText.setText("");
   clock.anims.play('clock' , false);
+  gameActive = false;
+  totalTime = gameEndTime - gameStartTime
   stop();
 }
 playButtonUp = () => {
@@ -305,6 +340,9 @@ playButtonUp = () => {
   setTimeout(function(){
     gameActive = true;
     start();
+    var today = new Date();
+    gameStartTime = today.getHours() * 3600 + today.getMinutes() * 60 + today.getSeconds();
+    
     subscribe(DisplayNote)
 
       var options = {
@@ -318,24 +356,43 @@ playButtonUp = () => {
             console.log(findMostFrequentElement(resultNotes))
             if(findMostFrequentElement(resultNotes) == processNotes[note_i])
             {
+              resultText.setTexture('incorrect');
+              resultText.setVisible(true);
               isDead = true;
             }else{
+              resultText.setTexture('correct');
+              resultText.setVisible(true);
+
               forwardDis = 5 - (endSeconds - startSeconds)
               totalScore += forwardDis;
-              self.socket.emit('addScore' , self.socket.id , totalScore)
+              self.socket.emit('addScore',self.socket.id , totalScore);
             }
-            resultNotes = [];
-            //console.log(startSeconds , endSeconds)
-            //if(findMostFrequentElement(resultNotes) == 'C' || findMostFrequentElement(resultNotes) == 'C#'){
-            moveActive = true;
             setTimeout(function(){
-              moveActive = false;
-              clock.anims.play('clock' , true);
-            } , 200)
+              resultText.setVisible(false);
+            }, 1200);
             note_i ++;
+            totalNote ++;
+            self.playNote.setText("Note: " + totalNote);
             if(note_i == limitCounts)  stopGame();
+            else{
+              noteDisplay = false;
+              button_play.setTexture('count3');
+              button_play.setVisible(true);
+              button_play.anims.play('countdown');
+              button_play.on("animationcomplete" , function(){
+                noteDisplay = true;
+                resultNotes = [];
+                gameActive = true;
+                //console.log(startSeconds , endSeconds)
+                //if(findMostFrequentElement(resultNotes) == 'C' || findMostFrequentElement(resultNotes) == 'C#'){
+                moveActive = true;
+                setTimeout(function(){
+                  moveActive = false;
+                  clock.anims.play('clock' , true);
+                } , 200)
+              });
             }
-
+            }
             var today = new Date();
             startSeconds = today.getHours() * 3600 + today.getMinutes() * 60 + today.getSeconds();
           //  }
@@ -359,8 +416,14 @@ playButtonUp = () => {
 }
 let dpressed = false;
 gameScene.update = function() {
+
+  
      if(gameActive){
+      var today = new Date();
+      gameEndTime = today.getHours() * 3600 + today.getMinutes() * 60 + today.getSeconds();     
+      this.playTime.setText("Time: " + Math.floor(totalTime + (gameEndTime- gameStartTime)));
       noteText.setText(processNotes[note_i]);
+        if(!noteDisplay) noteText.setText("");
       if(moveActive){
           this.player.anims.play('run' , true);
         // this.player.setVelocityX(this.playerSpeed * 10);
