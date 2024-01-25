@@ -3,7 +3,6 @@
 import { USER_MEDIA_CONSTRAINTS, FFT_SIZE } from './constants.js'
 import { autoCorrelate } from './algorithm.js'
 import getDataFromFrequency from './getDataFromFrequency.js'
-
 export const freelizer = async () => {
   let rafID
   let audioContext
@@ -34,8 +33,8 @@ export const freelizer = async () => {
   await init()
 
   return {
-    start: () => update(),
-    stop: () => cancelAnimationFrame(rafID),
+    start: () => {update(); console.log(rafID)},
+    stop: () => {cancelAnimationFrame(rafID); console.log(rafID);},
     subscribe: (fn) => (callbacks = [...callbacks, fn]),
     unsubscribe: (fn) => (callbacks = callbacks.filter((el) => el !== fn)),
     getSource: () => source,

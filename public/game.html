@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Mount Everest</title>
+    <script  src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+    <script type="text/javascript" src="js/vad.js"></script>
+    <style>
+        @font-face{
+          font-family: 'pixelArt';
+          src:url('/assets/Font/pixelArt.ttf');
+        }
+        html,body {
+          margin: 0;
+          padding: 0;
+          background-color: #000;
+          font-family: 'pixelArt';
+        }
+
+    </style>
+</head>
+<body>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="js/game.js"></script>
+<script>
+    if(!window.localStorage.getItem('username')) {
+      window.location.replace('/');
+    }
+</script>
+</body>
+</html>
